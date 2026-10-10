@@ -83,88 +83,80 @@ async function save(img, path, { quality = 86 } = {}) {
 const meta = (p) => sharp(p).metadata();
 const blank = (width, height) => sharp({ create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } });
 
-// ---------- pencil sketch of the photo ----------
+// ---------- photo avatar (paper "sticker" cut-out) ----------
 
-let sketchCache;
-async function photoSketch() {
-  if (sketchCache) return sketchCache;
-  const SCALE = 4;
-  const m = await meta(`${ROOT}scripts/art/photo.png`);
-  const W = m.width * SCALE, H = m.height * SCALE;
-  const base = sharp(`${ROOT}scripts/art/photo.png`).resize(W, H, { kernel: 'lanczos3' });
-  const alpha = await base.clone().extractChannel(3).raw().toBuffer();
-  const grey = await base.clone().flatten({ background: '#ffffff' }).greyscale().median(5).toColourspace('b-w').raw().toBuffer();
-  const blurInv = await sharp(grey, { raw: { width: W, height: H, channels: 1 } }).negate().blur(9).toColourspace('b-w').raw().toBuffer();
-  const a2 = Buffer.alloc(W * H);
-  for (let i = 0; i < W * H; i++) {
-    const t = blurInv[i];
-    let v = t >= 255 ? 255 : Math.min(255, (grey[i] * 255) / (255 - t)); // colour dodge = pencil look
-    v = 255 - Math.min(255, (255 - v) * 2.4);
-    if (v > 214) v = 255; // drop paper speckle
-    a2[i] = Math.round(((255 - v) / 255) * alpha[i]); // ink darkness -> alpha, paper -> transparent
-  }
-  // Ink on an opaque white silhouette (like the original cartoon), so backgrounds don't show through the body.
-  // ...plus an ink contour around the silhouette (grown alpha minus original alpha).
-  const grown = await sharp(alpha, { raw: { width: W, height: H, channels: 1 } }).blur(5).toColourspace('b-w').raw().toBuffer();
-  const lum = Buffer.alloc(W * H), outA = Buffer.from(alpha);
-  for (let i = 0; i < W * H; i++) {
-    lum[i] = 255 - Math.round(a2[i] * (229 / 255));
-    if (alpha[i] < 140 && grown[i] > 40) { lum[i] = 26; outA[i] = Math.min(255, grown[i] * 2); }
-  }
-  sketchCache = {
-    W, H,
-    png: await sharp(lum, { raw: { width: W, height: H, channels: 1 } })
-      .joinChannel(outA, { raw: { width: W, height: H, channels: 1 } })
-      .toColourspace('b-w').png().toBuffer(),
-  };
-  return sketchCache;
+/** Solid-colour layer shaped by a single-channel mask. */
+const maskedLayer = (mask, w, h, grey) =>
+  sharp(Buffer.alloc(w * h, grey), { raw: { width: w, height: h, channels: 1 } })
+    .joinChannel(mask, { raw: { width: w, height: h, channels: 1 } }).toColourspace('b-w').png().toBuffer();
+
+/** Grow a mask by roughly `radius` px: blur, then threshold low (in JS - sharp would threshold before blurring). */
+async function growMask(mask, w, h, radius) {
+  const blurred = await sharp(mask, { raw: { width: w, height: h, channels: 1 } }).blur(Math.max(0.3, radius / 2)).toColourspace('b-w').raw().toBuffer();
+  // soft 1-2px ramp around the threshold keeps the edge anti-aliased
+  return blurred.map((v) => Math.max(0, Math.min(255, (v - 8) * 32)));
 }
 
-/** Sketch figure resized to a height; `crop` keeps the top fraction; `boil` re-jitters lines for animation frames. */
-async function figure(height, { crop, boil } = {}) {
-  const { W, H, png: sk0 } = await photoSketch();
-  let img = sharp(sk0);
-  if (crop) img = img.extract({ left: 0, top: 0, width: W, height: Math.round(H * crop) });
-  const buf = await img.resize({ height }).png().toBuffer({ resolveWithObject: true });
-  if (!boil) return buf;
-  const { width: w, height: h } = buf.info;
-  const s = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}">
-    <filter id="b"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="1" seed="${boil}"/><feDisplacementMap in="SourceGraphic" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter>
-    <image width="${w}" height="${h}" xlink:href="data:image/png;base64,${buf.data.toString('base64')}" filter="url(#b)"/></svg>`);
-  return sharp(s).png().toBuffer({ resolveWithObject: true });
+/**
+ * The photo cut-out at a given height with a white sticker border and an ink edge, so it sits in the hand-drawn
+ * world like a photo stuck onto the page. `crop` keeps the top fraction (no border along the cut);
+ * `tilt` rotates by degrees.
+ */
+async function figure(height, { crop, tilt = 0 } = {}) {
+  const src = `${ROOT}scripts/art/photo.png`;
+  const m = await meta(src);
+  let img = sharp(src);
+  if (crop) img = img.extract({ left: 0, top: 0, width: m.width, height: Math.round(m.height * crop) });
+  const photo = await img.resize({ height, kernel: 'lanczos3' }).sharpen({ sigma: 0.8 })
+    .modulate({ brightness: 1.03, saturation: 1.06 }).png().toBuffer({ resolveWithObject: true });
+  const { width: w, height: h } = photo.info;
+  const pad = Math.max(6, Math.round(height * 0.028)), W = w + pad * 2, H = h + pad * 2;
+  const alpha = await sharp(photo.data).extractChannel(3)
+    .extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } }).toColourspace('b-w').raw().toBuffer();
+  const paper = await growMask(alpha, W, H, pad * 0.55);
+  const ink = await growMask(alpha, W, H, pad * 0.8);
+  let out = await blank(W, H).composite([
+    { input: await maskedLayer(ink, W, H, 26) },
+    { input: await maskedLayer(paper, W, H, 255) },
+    { input: photo.data, left: pad, top: pad },
+  ]).png().toBuffer();
+  if (crop) out = await sharp(out).extract({ left: 0, top: 0, width: W, height: H - pad * 2 }).png().toBuffer();
+  if (tilt) out = await sharp(out).rotate(tilt, { background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+  return sharp(out).png().toBuffer({ resolveWithObject: true });
 }
 
 // ---------- avatar ----------
 
 async function avatars() {
   console.log('avatars');
-  // Corridor: 9 frames of the standing figure with hand-drawn "line boil".
+  // Corridor: 9 frames played ping-pong (1-9-1) -> a gentle sway.
   for (let f = 1; f <= 9; f++) {
-    const fig = await figure(990, { boil: f * 11 });
-    await save(blank(1024, 1024).composite([{ input: fig.data, left: Math.round(512 - fig.info.width / 2), top: 1024 - fig.info.height - 12 }]),
+    const t = (f - 1) / 8; // 0..1
+    const fig = await figure(930, { tilt: -1.2 + 2.4 * t });
+    await save(blank(1024, 1024).composite([{ input: fig.data, left: Math.round(512 - fig.info.width / 2), top: Math.max(0, 1020 - fig.info.height) }]),
       `${OUT}textures/corridor/avatar_anim/${f}.webp`);
   }
 
   // Entrance window: upper body peeking in from the bottom-right.
   {
-    const fig = await figure(860, { crop: 0.45, boil: 5 });
-    await save(blank(1024, 1024).composite([{ input: fig.data, left: Math.min(1024 - fig.info.width, 560), top: 1024 - fig.info.height }]),
+    const fig = await figure(820, { crop: 0.47, tilt: -4 });
+    await save(blank(1024, 1024).composite([{ input: fig.data, left: Math.min(1024 - fig.info.width, 540), top: Math.max(0, 1024 - fig.info.height + 30) }]),
       `${OUT}textures/entrance/avatar_window.webp`);
   }
 
-  // About intro: figure standing in a cloud (1781x890).
+  // About intro: standing on a cloud. 1632x890 matches the plane's 2816:1536 aspect in InfiniteSkyManager.
   {
-    const W = 1781, H = 890;
+    const W = 1632, H = 890;
     const cloud = `<path d="M170,690 C90,690 70,600 150,570 C120,480 260,440 320,500 C360,400 520,400 560,480
       C620,380 820,380 860,470 C930,400 1090,410 1110,500 C1180,430 1340,450 1350,540 C1450,500 1610,560 1580,650
       C1700,690 1640,800 1530,790 C1480,860 1290,850 1250,800 C1180,870 980,870 930,810 C850,880 640,870 600,810
       C520,870 330,860 300,800 C200,830 110,770 170,690 Z" fill="#ffffff"/>`;
-    const front = `<path d="M600,770 C560,690 700,640 760,700 C800,630 980,630 1000,700 C1060,650 1200,690 1170,780 C1150,850 640,850 600,770 Z" fill="#ffffff"/>`;
-    const fig = await figure(780, { boil: 3 });
+    const front = `<path d="M620,790 C580,720 710,670 770,720 C810,650 980,650 1000,715 C1060,670 1190,705 1160,790 C1140,860 660,860 620,790 Z" fill="#ffffff"/>`;
+    const fig = await figure(770);
     await save(blank(W, H).composite([
-      { input: await png(svg(W, H, cloud + sk(cloud, 7))) },
-      { input: fig.data, left: Math.round(W / 2 - fig.info.width / 2), top: 20 },
-      { input: await png(svg(W, H, front + sk(front, 7))) }, // front puff hides the feet
+      { input: await png(svg(W, H, `<g transform="translate(-75,0)">${cloud + sk(cloud, 7)}</g>`)) },
+      { input: fig.data, left: Math.round(W / 2 - fig.info.width / 2), top: 0 },
+      { input: await png(svg(W, H, `<g transform="translate(-75,0)">${front + sk(front, 7)}</g>`)) }, // front puff hides the feet
     ]), `${OUT}textures/about/awatarnachmurce.webp`);
   }
 }
@@ -577,14 +569,20 @@ async function brand() {
   console.log('favicon + og image');
   {
     const S = 426;
-    const base = svg(S, S, `<circle cx="${S / 2}" cy="${S / 2}" r="190" fill="#ffffff"/>` + sk(`<circle cx="${S / 2}" cy="${S / 2}" r="190"/><circle cx="${S / 2}" cy="${S / 2}" r="176"/>`, 8), 2);
-    const t = await textAt('AJ', S / 2, S / 2 + 6, { font: 'scribble', size: 210, maxW: 300 });
-    await sharp(await png(base)).composite([t]).png().toFile(`${OUT}favico.png`);
+    // Face crop from the photo (head sits around x=108, y=100 in the 270x975 source).
+    const R = 176;
+    const face = await sharp(`${ROOT}scripts/art/photo.png`).extract({ left: 28, top: 18, width: 160, height: 160 })
+      .flatten({ background: '#ffffff' }).resize(R * 2, R * 2, { kernel: 'lanczos3' }).sharpen({ sigma: 0.8 })
+      .composite([{ input: Buffer.from(`<svg width="${R * 2}" height="${R * 2}"><circle cx="${R}" cy="${R}" r="${R}" fill="#fff"/></svg>`), blend: 'dest-in' }])
+      .png().toBuffer();
+    const ring = svg(S, S, sk(`<circle cx="${S / 2}" cy="${S / 2}" r="${R + 6}"/><circle cx="${S / 2}" cy="${S / 2}" r="${R + 18}"/>`, 9), 2);
+    await sharp(await png(svg(S, S, `<circle cx="${S / 2}" cy="${S / 2}" r="${R + 18}" fill="#ffffff"/>`)))
+      .composite([{ input: face, left: S / 2 - R, top: S / 2 - R }, { input: await png(ring) }]).png().toFile(`${OUT}favico.png`);
     console.log('  wrote public/favico.png');
   }
   {
     const W = 1200, H = 630;
-    const fig = await figure(590, { boil: 2 });
+    const fig = await figure(560, { tilt: 2 });
     const base = svg(W, H, `<rect width="${W}" height="${H}" fill="${PAPER}"/>` + sk(`<rect x="22" y="22" width="${W - 44}" height="${H - 44}" rx="8"/>
       <path d="M74,470 l40,0 l0,-36 l40,0 l0,36 l40,0 l0,-36 l40,0 l0,36 l40,0 l0,-36 l40,0 l0,36 l40,0"/>`, 4), 6);
     const layers = [

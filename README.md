@@ -29,7 +29,7 @@ in `profile.js`, and the GitHub/LinkedIn links in `public/start/index.html`.
 
 ### Regenerating the artwork
 
-Textures that show personal content (avatar, project cards, balloons, islands, award cards, studio screens,
+Textures that show personal content (photo avatar with a sticker border, project cards, balloons, islands, award cards, studio screens,
 favicon, social card) are generated from `profile.js` and the photo in `scripts/art/photo.png`:
 
 ```bash

@@ -273,12 +273,12 @@ const IntroMilestone = ({ z, scrollProgressRef }) => {
     const motto2Ref = useRef();
 
     // Base positions
-    const baseY = 2;
+    const baseY = 2.1;
 
     // Calculate aspect ratio
     // LEGACY FIX: Use original dimensions (2816x1536) to prevent stretching
     const legacyAspectRatio = 2816 / 1536; 
-    const avatarWidth = 6; // Zwiększony rozmiar awatara na chmurce
+    const avatarWidth = 7; // avatar on the cloud
     const avatarHeight = avatarWidth / legacyAspectRatio;
 
     // Animation: floating + spread apart when close
