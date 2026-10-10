@@ -4,9 +4,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/start", "destination": "/start/index.html" },
-    { "source": "/:room(about|gallery|studio|contact)/?", "destination": "/index.html" }
+    { "source": "/(about|gallery|studio|contact)", "destination": "/index.html" }
   ],
   "headers": [
     {
