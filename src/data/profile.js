@@ -6,7 +6,7 @@
  * TODO(owner): fill the links marked TODO below.
  */
 
-export const SITE_URL = 'https://portfolio-abhilash.vercel.app'; // Vercel's default for a project named portfolio-abhilash - update if the domain differs
+export const SITE_URL = 'https://abhilashjoyeal.work.gd';
 
 const BITFLOW_URL = 'https://bitflow-2-0.onrender.com'; // TODO: confirm
 
