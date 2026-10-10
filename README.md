@@ -37,7 +37,7 @@ node scripts/art/gen-art.mjs
 ```
 
 Run a single group with e.g. `node scripts/art/gen-art.mjs balloons` (groups: `avatars`, `galleryCards`,
-`techLogos`, `balloons`, `islands`, `certificates`, `monitorBezel`, `studioScreens`, `door`, `wallArt`, `brand`).
+`techLogos`, `balloons`, `islands`, `certificates`, `monitorBezel`, `studioScreens`, `door`, `entranceDoors`, `wallArt`, `brand`).
 
 ## Local development
 

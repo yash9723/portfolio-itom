@@ -374,7 +374,9 @@ async function island(tpl, word, out, { eraseY, grassY, x0, x1 }) {
   const opts = { font: 'fred', size: Math.round(H * 0.36), maxW: (x1 - x0) * 0.95, maxH: H * 0.4, vAnchor: 'bottom' };
   const shadow = await textAt(word, (x0 + x1) / 2 + W * 0.007, cy + H * 0.01, { ...opts, color: '#a0a0a0' });
   const front = await textAt(word, (x0 + x1) / 2, cy, opts);
-  await save(sharp(tpl).composite([{ input: await png(eraser) }, shadow, front, { input: await png(grass) }]), `${OUT}textures/about/${out}`);
+  // erase to transparency (the island texture has alpha), then draw on the cleared canvas
+  const cleared = await sharp(tpl).ensureAlpha().composite([{ input: await png(eraser), blend: 'dest-out' }]).png().toBuffer();
+  await save(sharp(cleared).composite([shadow, front, { input: await png(grass) }]), `${OUT}textures/about/${out}`);
 }
 
 async function islands() {
@@ -492,6 +494,57 @@ async function door() {
   }
 }
 
+// ---------- entrance doors (tech stickers) ----------
+
+// Each spot covers one old web-dev sticker. Circles: r is a fraction of width.
+// Rects: w is a fraction of width, h a fraction of height.
+const ENTRANCE_STICKERS = {
+  left: [
+    { shape: 'rect', cx: 0.51, cy: 0.172, w: 0.68, h: 0.1, label: 'VERILOG', color: '#7b5cff' },
+    { shape: 'circle', cx: 0.485, cy: 0.323, r: 0.215, label: 'ESP32', color: '#e7352c' },
+    { shape: 'circle', cx: 0.46, cy: 0.505, r: 0.2, label: 'C', color: '#3949ab' },
+    { shape: 'rect', cx: 0.495, cy: 0.678, w: 0.62, h: 0.07, label: 'SystemVerilog', color: '#00897b' },
+    { shape: 'circle', cx: 0.42, cy: 0.777, r: 0.195, label: 'FSM', color: '#f9a825' },
+  ],
+  right: [
+    { shape: 'rect', cx: 0.5, cy: 0.205, w: 0.66, h: 0.19, label: 'VLSI', color: '#5a2d91' },
+    { shape: 'rect', cx: 0.525, cy: 0.348, w: 0.6, h: 0.13, label: 'IoT', color: '#2e7d32' },
+    { shape: 'circle', cx: 0.41, cy: 0.462, r: 0.14, label: 'Python', color: '#3776ab' },
+    { shape: 'circle', cx: 0.65, cy: 0.459, r: 0.12, label: 'PCB', color: '#1b5e20' },
+    { shape: 'rect', cx: 0.69, cy: 0.556, w: 0.27, h: 0.06, label: 'MATLAB', color: '#ef6c00' },
+    { shape: 'circle', cx: 0.53, cy: 0.651, r: 0.19, label: 'Cadence', color: '#c62828' },
+    { shape: 'circle', cx: 0.34, cy: 0.754, r: 0.135, label: 'R-Pi', color: '#c51a4a' },
+    { shape: 'circle', cx: 0.645, cy: 0.778, r: 0.135, label: 'RTL', color: '#00838f' },
+  ],
+};
+
+async function entranceDoors() {
+  console.log('entrance doors');
+  for (const side of ['left', 'right']) {
+    for (const painted of [false, true]) {
+      const tpl = `${TPL}entrance_${side}${painted ? '_painted' : ''}.webp`;
+      const { width: W, height: H } = await meta(tpl);
+      const shapes = [], layers = [];
+      for (const sp of ENTRANCE_STICKERS[side]) {
+        const cx = W * sp.cx, cy = H * sp.cy;
+        let shape, bw, bh;
+        if (sp.shape === 'circle') {
+          const r = W * sp.r; bw = bh = r * 1.5;
+          shape = `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+        } else {
+          const w = W * sp.w, h = H * sp.h; bw = w * 0.86; bh = h * 0.75;
+          shape = `<rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="${Math.min(w, h) * 0.25}"/>`;
+        }
+        const fill = painted ? sp.color : '#ffffff';
+        shapes.push(shape.replace('/>', ` fill="${fill}"/>`) + (painted ? fillC(shape.replace('/>', ' fill="#000" fill-opacity="0.12"/>')) : '') + sk(shape, Math.max(3, W / 120)));
+        layers.push(await textAt(sp.label, cx, cy, { font: 'sketchBold', size: Math.round(bh), maxW: bw, maxH: bh, color: painted ? '#ffffff' : INK }));
+      }
+      const base = await png(svg(W, H, shapes.join(''), 17));
+      await save(sharp(tpl).composite([{ input: base }, ...layers]), `${OUT}textures/doors/door_${side}_${painted ? 'painted' : 'sketch'}.webp`);
+    }
+  }
+}
+
 // ---------- corridor wall drawing ----------
 
 async function wallArt() {
@@ -545,7 +598,7 @@ async function brand() {
   }
 }
 
-const GROUPS = { avatars, galleryCards, techLogos, balloons, islands, certificates, monitorBezel, studioScreens, door, wallArt, brand };
+const GROUPS = { avatars, galleryCards, techLogos, balloons, islands, certificates, monitorBezel, studioScreens, door, entranceDoors, wallArt, brand };
 if (only && !GROUPS[only]) throw new Error(`Unknown group "${only}". Groups: ${Object.keys(GROUPS).join(', ')}`);
 for (const [name, fn] of Object.entries(GROUPS)) {
   if (!only || only === name) await fn();
