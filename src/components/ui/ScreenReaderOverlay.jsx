@@ -1,6 +1,7 @@
 import { useScene } from '../../context/SceneContext';
-import { useGalleryProjects, useStudioContent, useAwards } from '../../hooks/useSanityData';
+import { useGalleryProjects, useStudioContent, useAwards } from '../../hooks/useContentData';
 import '../../styles/ScreenReaderOverlay.scss';
+import { PROFILE } from '../../data/profile';
 
 /**
  * ScreenReaderOverlay — A7 Accessibility
@@ -26,11 +27,11 @@ const ScreenReaderOverlay = () => {
 
             {/* Main accessible navigation */}
             <nav id="sr-main-nav" className="sr-only" aria-label="Portfolio rooms">
-                <h1>ITom — Creative Developer Portfolio</h1>
+                <h1>{PROFILE.fullName} — {PROFILE.role} Portfolio</h1>
                 <h2>Portfolio Navigation</h2>
 
                 {!hasEntered && (
-                    <p>Welcome to ITom's interactive 3D portfolio. Click or press Enter on the doors to enter.</p>
+                    <p>Welcome to {PROFILE.fullName}'s interactive 3D portfolio. Click or press Enter on the doors to enter.</p>
                 )}
 
                 {hasEntered && !isInRoom && (
@@ -54,7 +55,7 @@ const ScreenReaderOverlay = () => {
                             </li>
                             <li>
                                 <button onClick={() => teleportTo('studio')} type="button">
-                                    The Studio — Technologies and experience
+                                    The Studio — Talks, events and updates
                                 </button>
                             </li>
                         </ul>
@@ -81,7 +82,7 @@ const ScreenReaderOverlay = () => {
                                 
                                 {awards && (
                                     <section>
-                                        <h4>My Awards</h4>
+                                        <h4>Awards, roles and builds</h4>
                                         <ul>
                                             {awards.sotd && awards.sotd.items && awards.sotd.items.map((a, i) => (
                                                 <li key={i}>{a.label} - {a.date} {a.url && <a href={a.url}>View</a>}</li>
@@ -118,13 +119,19 @@ const ScreenReaderOverlay = () => {
                         {currentRoom === 'contact' && (
                             <div aria-label="Contact room content">
                                 <h3>Contact Me</h3>
-                                <p>Find my social media links displayed as floating barrels. Click to visit my profiles on LinkedIn, GitHub, and other platforms.</p>
+                                <p>Find my links displayed as floating barrels: LinkedIn, GitHub, BitFlow, my resume and email.</p>
+                                <ul>
+                                    <li><a href={PROFILE.links.email}>Email {PROFILE.email}</a></li>
+                                    <li><a href={PROFILE.links.linkedin}>LinkedIn</a></li>
+                                    <li><a href={PROFILE.links.github}>GitHub</a></li>
+                                    <li><a href={PROFILE.links.resume}>Resume (PDF)</a></li>
+                                </ul>
                             </div>
                         )}
                         {currentRoom === 'studio' && (
                             <div aria-label="Studio room content">
                                 <h3>The Studio</h3>
-                                <p>Explore my experience and skills on rotating monitors. Click a monitor to read detailed information about my work.</p>
+                                <p>Talks, events and updates on rotating screens. Click a screen to read more.</p>
 
                                 {studio && studio.length > 0 && (
                                     <ul>

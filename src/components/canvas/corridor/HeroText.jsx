@@ -2,6 +2,7 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
+import { PROFILE } from '../../../data/profile';
 
 // Local fonts for sketch-style typography (TTF format required by troika)
 const RUBIK_SCRIBBLE_URL = '/fonts/RubikScribble-Regular.ttf';
@@ -14,7 +15,7 @@ let hasPlayedDrawAnimation = false;
  * HeroText Component - Hand-drawn Style with Sketch Fonts
  * 
  * WOW Effects for Awwwards SOTD:
- * - ITOM in Rubik Scribble font (splits into letters during scroll)
+ * - Short name in Rubik Scribble font (splits into letters during scroll)
  * - Creative developer in Cabin Sketch font (also splits)
  * - Floating micro-animations
  * - Parallax split effect
@@ -54,21 +55,28 @@ const HeroText = ({ position = [0, 0.3, 0] }) => {
     // Pre-allocate Vector3 to avoid per-frame garbage collection
     const worldPosVec = useRef(new THREE.Vector3());
 
-    // Letter positions for ITOM split effect
-    const letters = useMemo(() => [
-        { char: 'I', baseX: -0.95, splitDir: -1.6, delay: 0 },
-        { char: 'T', baseX: -0.43, splitDir: -0.6, delay: 0 },
-        { char: 'O', baseX: 0.23, splitDir: 0.6, delay: 0 },
-        { char: 'M', baseX: 0.95, splitDir: 1.8, delay: 0 },
-    ], []);
+    // Letter positions for the hero name split effect.
+    // Built from PROFILE.shortName: letters spread evenly, outer letters fly further.
+    const letters = useMemo(() => {
+        const chars = PROFILE.shortName.split('');
+        const span = 1.9;
+        const step = chars.length > 1 ? span / (chars.length - 1) : 0;
+        return chars.map((char, i) => {
+            const t = chars.length > 1 ? i / (chars.length - 1) * 2 - 1 : 0; // -1..1
+            return { char, baseX: -span / 2 + i * step, splitDir: t * 1.7, delay: 0 };
+        });
+    }, []);
 
     // Tagline words for split effect
-    const taglineWords = useMemo(() => [
-        { text: '<', baseX: -0.85, splitDir: -1.5, delay: 0 },
-        { text: 'creative', baseX: -0.4, splitDir: -0.8, delay: 0 },
-        { text: 'developer', baseX: 0.4, splitDir: 0.8, delay: 0 },
-        { text: '/>', baseX: 0.85, splitDir: 1.5, delay: 0 },
-    ], []);
+    const taglineWords = useMemo(() => {
+        const [open, w1, w2, close] = PROFILE.taglineWords;
+        return [
+            { text: open, baseX: -0.85, splitDir: -1.5, delay: 0 },
+            { text: w1, baseX: -0.42, splitDir: -0.8, delay: 0 },
+            { text: w2, baseX: 0.32, splitDir: 0.8, delay: 0 },
+            { text: close, baseX: 0.85, splitDir: 1.5, delay: 0 },
+        ];
+    }, []);
 
     // Animation loop
     useFrame((state, delta) => {
@@ -97,7 +105,7 @@ const HeroText = ({ position = [0, 0.3, 0] }) => {
 
         splitAmount.current = THREE.MathUtils.lerp(splitAmount.current, targetSplit.current, 0.08);
 
-        // Apply split to each letter of ITOM
+        // Apply split to each letter of the name
         letterRefs.current.forEach((ref, i) => {
             if (ref) {
                 // Ensure opacity is 1
@@ -131,10 +139,10 @@ const HeroText = ({ position = [0, 0.3, 0] }) => {
 
     return (
         <group ref={groupRef} position={position} scale={[scale, scale, 1]}>
-            {/* ITOM Letters - Rubik Scribble font with fade-in animation */}
+            {/* Name letters - Rubik Scribble font with fade-in animation */}
             {letters.map((letter, i) => (
                 <Text
-                    key={letter.char}
+                    key={i}
                     ref={(el) => (letterRefs.current[i] = el)}
                     position={[letter.baseX, 0.2, 0]}
                     fontSize={0.9}
@@ -153,7 +161,7 @@ const HeroText = ({ position = [0, 0.3, 0] }) => {
             {/* Tagline words - Cabin Sketch font with fade-in animation */}
             {taglineWords.map((word, i) => (
                 <Text
-                    key={word.text}
+                    key={i}
                     ref={(el) => (taglineRefs.current[i] = el)}
                     position={[word.baseX, -0.55, 0.3]}
                     fontSize={0.16}

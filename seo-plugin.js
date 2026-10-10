@@ -1,494 +1,177 @@
-import { createClient } from '@sanity/client';
-
-const sanityClient = createClient({
-    projectId: 'kv5wjjmj',
-    dataset: 'production',
-    useCdn: true,
-    apiVersion: '2024-03-01',
-});
-
-// Tech stack filename -> human-readable name mapping for JSON-LD
-const TECH_STACK_NAMES = {
-    'reactlogo.webp': 'React',
-    'htmllogo.webp': 'HTML',
-    'csslogo.webp': 'CSS',
-    'jslogo.webp': 'JavaScript',
-    'tailwindlogo.webp': 'Tailwind CSS',
-    'firebaselogo.webp': 'Firebase',
-    'netlifylogo.webp': 'Netlify',
-    'wordpresslogo.webp': 'WordPress',
-    'elementorlogo.webp': 'Elementor',
-    'phplogo.webp': 'PHP',
-};
+import { PROFILE, SITE_URL, EDUCATION, EXPERIENCE, PROJECTS, SKILLS, AWARDS, STUDIO_ITEMS } from './src/data/profile.js';
 
 /**
- * Helper to ensure dates are in ISO-8601 format with timezone for SEO.
+ * Build-time SEO for a WebGL SPA:
+ *  - replaces the `__SITE_URL__` token in index.html
+ *  - injects a crawlable, visually hidden HTML version of the portfolio (#seo-content)
+ *  - injects schema.org JSON-LD (Person, WebSite, ProfilePage, projects)
+ *  - emits /llms.txt, /robots.txt and /sitemap.xml
+ * Everything comes from src/data/profile.js, so the site and its SEO never drift apart.
  */
-function formatIsoDate(dateString) {
-    if (!dateString) return undefined;
-    if (dateString.includes('T')) return dateString; // Already has time/timezone
-    return `${dateString}T12:00:00Z`; // Default to noon UTC
-}
 
-/**
- * Build dynamic JSON-LD structured data from Sanity content.
- * This generates schema.org entities that AI search engines (Google AI Overviews,
- * Perplexity, Gemini) use to understand and cite content in their answers.
- */
-function buildJsonLd(globalInfo, projects, studio, awards, faqList) {
-    const graph = [];
+const esc = (s = '') => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    // --- 1. Person: Central node of the Knowledge Graph ---
-    const person = {
-        '@type': 'Person',
-        '@id': 'https://itomdev.com/#person',
-        name: 'Tomasz Szmajda',
-        alternateName: ['ITom', 'ITom Dev', 'Tomasz ITom Szmajda'],
-        url: 'https://itomdev.com',
-        jobTitle: 'Creative Frontend Developer',
-        description: globalInfo?.aboutMe || 'Creative developer specializing in 3D web experiences.',
-        knowsAbout: ['React', 'Three.js', 'JavaScript', 'TypeScript', 'GSAP', 'Next.js', 'WebGL', '3D Graphics', 'Web Development'],
-        sameAs: [
-            globalInfo?.linkedinUrl,
-            globalInfo?.githubUrl,
-            globalInfo?.instagramUrl,
-            globalInfo?.xUrl,
-            globalInfo?.tiktokUrl,
-            globalInfo?.youtubeUrl
-        ].filter(Boolean)
-    };
-    graph.push(person);
+// Placeholder links (TODO in profile.js) should not be advertised to crawlers.
+const isRealLink = (url) => !!url && !/^https:\/\/(www\.)?(github|linkedin)\.com\/?$/.test(url);
 
-    // --- 2. WebSite ---
-    const website = {
-        '@type': 'WebSite',
-        '@id': 'https://itomdev.com/#website',
-        url: 'https://itomdev.com',
-        name: globalInfo?.siteTitle || 'Tomasz "ITom" Szmajda | Creative 3D Portfolio',
-        description: globalInfo?.siteDescription || 'Interactive 3D Developer Portfolio by Tomasz Szmajda',
-        publisher: { '@id': 'https://itomdev.com/#person' }
-    };
-    graph.push(website);
+const awardItems = () => Object.values(AWARDS).flatMap((group) => group.items);
+const allSkills = () => [...new Set(Object.values(SKILLS).flat())];
 
-    // --- 3. ProfilePage ---
-    const profilePage = {
-        '@type': 'ProfilePage',
-        '@id': 'https://itomdev.com/#profilepage',
-        url: 'https://itomdev.com',
-        mainEntity: { '@id': 'https://itomdev.com/#person' },
-        about: { '@id': 'https://itomdev.com/#person' }
-    };
-    graph.push(profilePage);
-
-    // --- 4. FAQPage (GEO & AI search engine optimizer) ---
-    if (faqList && faqList.length > 0) {
-        const faqPage = {
-            '@type': 'FAQPage',
-            '@id': 'https://itomdev.com/#faq',
-            mainEntity: faqList.map(item => ({
-                '@type': 'Question',
-                name: item.question,
-                acceptedAnswer: {
-                    '@type': 'Answer',
-                    text: item.answer
-                }
-            }))
-        };
-        graph.push(faqPage);
-    }
-
-    // --- 5. ItemList: Portfolio Projects (Google rich results for lists) ---
-    if (projects && projects.length > 0) {
-        graph.push({
+function buildJsonLd() {
+    const personId = `${SITE_URL}/#person`;
+    const graph = [
+        {
+            '@type': 'Person',
+            '@id': personId,
+            name: PROFILE.fullName,
+            alternateName: [PROFILE.shortName, PROFILE.displayName],
+            url: SITE_URL,
+            email: `mailto:${PROFILE.email}`,
+            jobTitle: PROFILE.role,
+            description: PROFILE.summary,
+            knowsAbout: allSkills(),
+            alumniOf: EDUCATION.map((e) => ({ '@type': 'EducationalOrganization', name: e.school })),
+            memberOf: EXPERIENCE.map((x) => ({ '@type': 'Organization', name: x.org })),
+            award: awardItems().map((a) => a.label),
+            sameAs: [PROFILE.links.linkedin, PROFILE.links.github].filter(isRealLink),
+        },
+        {
+            '@type': 'WebSite',
+            '@id': `${SITE_URL}/#website`,
+            url: SITE_URL,
+            name: `${PROFILE.fullName} | ${PROFILE.role}`,
+            publisher: { '@id': personId },
+        },
+        {
+            '@type': 'ProfilePage',
+            '@id': `${SITE_URL}/#profilepage`,
+            url: SITE_URL,
+            mainEntity: { '@id': personId },
+        },
+        {
             '@type': 'ItemList',
-            '@id': 'https://itomdev.com/#projectslist',
-            name: 'Portfolio Projects by Tomasz "ITom" Szmajda',
-            description: 'Selected web development projects showcasing React, Three.js, and creative frontend engineering.',
-            numberOfItems: projects.length,
-            itemListElement: projects.map((p, i) => ({
+            '@id': `${SITE_URL}/#projectslist`,
+            name: `Projects by ${PROFILE.fullName}`,
+            numberOfItems: PROJECTS.length,
+            itemListElement: PROJECTS.map((p, i) => ({
                 '@type': 'ListItem',
                 position: i + 1,
                 item: {
                     '@type': 'CreativeWork',
-                    name: p.seoTitle || p.title,
-                    description: p.seoDescription || p.description || '',
-                    url: p.url || undefined,
-                    creator: { '@id': 'https://itomdev.com/#person' },
-                    ...(p.techStack && p.techStack.length > 0 ? {
-                        keywords: p.techStack.map(t => TECH_STACK_NAMES[t] || t).join(', ')
-                    } : {}),
-                }
-            }))
-        });
-
-        // Individual CreativeWork entries for each project (richer detail)
-        projects.forEach(p => {
-            const projectSlug = p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            graph.push({
-                '@type': 'CreativeWork',
-                '@id': `https://itomdev.com/#project-${projectSlug}`,
-                name: p.seoTitle || p.title,
-                description: p.seoDescription || p.description || '',
-                url: p.url || undefined,
-                creator: { '@id': 'https://itomdev.com/#person' },
-                ...(p.techStack && p.techStack.length > 0 ? {
-                    keywords: p.techStack.map(t => TECH_STACK_NAMES[t] || t).join(', ')
-                } : {}),
-            });
-        });
-    }
-
-    // --- 6. Studio Content (YouTube -> VideoObject, Blog -> Article, TikTok -> VideoObject) ---
-    if (studio && studio.length > 0) {
-        studio.forEach((s, idx) => {
-            const studioSlug = `studio-item-${idx}`;
-            if (s.platform === 'youtube') {
-                let embedUrl = undefined;
-                if (s.url) {
-                    const ytMatch = s.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^"&?\/\s]{11})/);
-                    if (ytMatch && ytMatch[1]) {
-                        embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
-                    }
-                }
-
-                graph.push({
-                    '@type': 'VideoObject',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
-                    name: s.seoTitle || s.title,
-                    description: s.seoDescription || s.description || '',
-                    url: s.url || undefined,
-                    contentUrl: s.url || undefined,
-                    ...(embedUrl ? { embedUrl } : {}),
-                    thumbnailUrl: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
-                    ...(s.duration ? { duration: `PT${s.duration.replace(':', 'M')}S` } : {}),
-                    ...(s.date ? { uploadDate: formatIsoDate(s.date) } : {}),
-                    ...(s.views ? { interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/WatchAction', userInteractionCount: s.views } } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
-                });
-            } else if (s.platform === 'blog') {
-                graph.push({
-                    '@type': 'Article',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
-                    headline: s.seoTitle || s.title,
-                    description: s.seoDescription || s.description || '',
-                    url: s.url || undefined,
-                    image: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
-                    ...(s.date ? { datePublished: formatIsoDate(s.date) } : {}),
-                    ...(s.readTime ? { timeRequired: `PT${s.readTime.replace(' min', '')}M` } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
-                });
-            } else if (s.platform === 'tiktok') {
-                graph.push({
-                    '@type': 'VideoObject',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
-                    name: s.seoTitle || s.title,
-                    description: s.seoDescription || s.description || '',
-                    url: s.url || undefined,
-                    contentUrl: s.url || undefined,
-                    thumbnailUrl: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
-                    ...(s.date ? { uploadDate: formatIsoDate(s.date) } : {}),
-                    ...(s.views ? { interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/WatchAction', userInteractionCount: s.views } } : {}),
-                    ...(s.likes ? { aggregateRating: { '@type': 'AggregateRating', ratingCount: s.likes } } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
-                });
-            } else if (s.platform === 'instagram' || s.platform === 'x' || s.platform === 'linkedin') {
-                graph.push({
-                    '@type': 'SocialMediaPosting',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
-                    headline: s.seoTitle || s.title,
-                    description: s.seoDescription || s.description || '',
-                    url: s.url || undefined,
-                    image: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
-                    ...(s.date ? { datePublished: formatIsoDate(s.date) } : {}),
-                    ...(s.likes ? { interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: s.likes } } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
-                });
-            } else if (s.platform === 'codrops') {
-                graph.push({
-                    '@type': 'Article',
-                    '@id': `https://itomdev.com/#${studioSlug}`,
-                    headline: s.seoTitle || s.title,
-                    description: s.seoDescription || s.description || '',
-                    url: s.url || undefined,
-                    image: s.thumbnailUrl || 'https://itomdev.com/og-image.webp',
-                    ...(s.date ? { datePublished: formatIsoDate(s.date) } : {}),
-                    author: { '@id': 'https://itomdev.com/#person' },
-                });
-            }
-        });
-    }
-
-    // --- 7. Awards as schema.org Award/CreativeWork ---
-    if (awards && awards.length > 0) {
-        const categoryLabels = { sotd: 'Site of the Day', sotm: 'Site of the Month', other: 'Honorable Mention' };
-        graph.push({
-            '@type': 'ItemList',
-            '@id': 'https://itomdev.com/#awardslist',
-            name: 'Web Design Awards received by Tomasz "ITom" Szmajda',
-            numberOfItems: awards.length,
-            itemListElement: awards.map((a, i) => ({
-                '@type': 'ListItem',
-                position: i + 1,
-                item: {
-                    '@type': 'CreativeWork',
-                    name: `${categoryLabels[a.category] || a.category} — ${a.seoTitle || a.title}`,
-                    ...(a.date ? { dateCreated: formatIsoDate(a.date) } : {}),
-                    url: a.url || undefined,
-                    description: a.seoDescription || undefined,
-                    award: categoryLabels[a.category] || a.category,
-                    creator: { '@id': 'https://itomdev.com/#person' },
-                }
-            }))
-        });
-    }
-
-    return {
-        '@context': 'https://schema.org',
-        '@graph': graph
-    };
+                    name: p.title,
+                    description: p.description,
+                    ...(isRealLink(p.url) ? { url: p.url } : {}),
+                    keywords: p.tech.join(', '),
+                    creator: { '@id': personId },
+                },
+            })),
+        },
+    ];
+    return { '@context': 'https://schema.org', '@graph': graph };
 }
 
-// Helper to generate the llms.txt content in clean Markdown
-function buildLlmsTxt(globalInfo, projects, studio, awards, faqList) {
-    const siteTitle = globalInfo?.siteTitle || 'Tomasz "ITom" Szmajda | Creative 3D Portfolio';
-    const siteDescription = globalInfo?.siteDescription || 'Interactive 3D Developer Portfolio';
-    const aboutMe = globalInfo?.aboutMe || 'I am a creative developer specializing in 3D web experiences.';
-
-    let content = `# ${siteTitle}\n`;
-    content += `> ${siteDescription}\n\n`;
-
-    content += `## Biography / About Me\n`;
-    content += `${aboutMe}\n\n`;
-
-    content += `## Core Technologies & Skills\n`;
-    content += `- React, Three.js, React Three Fiber (R3F), GSAP (GreenSock), JavaScript, TypeScript, Next.js, WebGL, 3D Graphics, Web Development.\n\n`;
-
-    if (projects && projects.length > 0) {
-        content += `## Selected Portfolio Projects\n`;
-        projects.forEach(p => {
-            const tech = p.techStack ? ` (Tech: ${p.techStack.map(t => TECH_STACK_NAMES[t] || t).join(', ')})` : '';
-            content += `- [${p.seoTitle || p.title}](${p.url || 'https://itomdev.com'}): ${p.seoDescription || p.description || ''}${tech}\n`;
-        });
-        content += `\n`;
+function buildSeoHtml() {
+    const li = (inner) => `      <li>${inner}</li>\n`;
+    let h = `<div id="seo-content" class="sr-only-seo">\n`;
+    h += `  <header>\n    <h1>${esc(PROFILE.fullName)} | ${esc(PROFILE.role)}</h1>\n    <p>${esc(PROFILE.summary)}</p>\n  </header>\n`;
+    h += `  <nav aria-label="Main Navigation">\n    <ul>\n`;
+    for (const [href, label] of [['/', 'Home'], ['/about', 'About'], ['/gallery', 'Projects'], ['/studio', 'Talks & Events'], ['/contact', 'Contact']]) {
+        h += li(`<a href="${href}">${label}</a>`);
     }
+    h += `    </ul>\n  </nav>\n  <main>\n`;
 
-    if (studio && studio.length > 0) {
-        content += `## Studio Content & Publications\n`;
-        studio.forEach(s => {
-            content += `- [${s.seoTitle || s.title} (${s.platform})](${s.url || 'https://itomdev.com'}): ${s.seoDescription || s.description || ''}\n`;
-        });
-        content += `\n`;
+    h += `  <section id="experience">\n    <h2>Experience</h2>\n`;
+    for (const x of EXPERIENCE) {
+        h += `    <article>\n      <h3>${esc(x.role)}, ${esc(x.org)} (${esc(x.period)})</h3>\n      <ul>\n`;
+        h += x.points.map((p) => `        <li>${esc(p)}</li>\n`).join('');
+        h += `      </ul>\n    </article>\n`;
     }
+    h += `  </section>\n`;
 
-    if (awards && awards.length > 0) {
-        content += `## Design Awards & Achievements\n`;
-        const categoryLabels = { sotd: 'Site of the Day', sotm: 'Site of the Month', other: 'Honorable Mention' };
-        awards.forEach(a => {
-            const category = categoryLabels[a.category] || a.category;
-            content += `- **${category}** — [${a.seoTitle || a.title}](${a.url || 'https://itomdev.com'}): Awarded on ${a.date || 'unknown'}. ${a.seoDescription || ''}\n`;
-        });
-        content += `\n`;
+    h += `  <section id="projects">\n    <h2>Projects</h2>\n    <ul>\n`;
+    for (const p of PROJECTS) {
+        h += li(`<h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><p>Tech: ${esc(p.tech.join(', '))}</p>${isRealLink(p.url) ? `<a href="${esc(p.url)}">Visit ${esc(p.title)}</a>` : ''}`);
     }
+    h += `    </ul>\n  </section>\n`;
 
-    if (faqList && faqList.length > 0) {
-        content += `## Frequently Asked Questions (FAQ)\n`;
-        faqList.forEach(item => {
-            content += `- **${item.question}**\n`;
-            content += `  ${item.answer.replace(/\n/g, '\n  ')}\n`;
-        });
-    }
+    h += `  <section id="education">\n    <h2>Education</h2>\n    <ul>\n`;
+    h += EDUCATION.map((e) => li(`${esc(e.degree)}, ${esc(e.school)} (${esc(e.period)})`)).join('');
+    h += `    </ul>\n  </section>\n`;
 
-    return content;
+    h += `  <section id="skills">\n    <h2>Technical Skills</h2>\n    <ul>\n`;
+    h += Object.entries(SKILLS).map(([group, items]) => li(`<strong>${esc(group)}:</strong> ${esc(items.join(', '))}`)).join('');
+    h += `    </ul>\n  </section>\n`;
+
+    h += `  <section id="awards">\n    <h2>Awards & Achievements</h2>\n    <ul>\n`;
+    h += awardItems().map((a) => li(`${esc(a.label)} (${esc(a.date)})`)).join('');
+    h += `    </ul>\n  </section>\n`;
+
+    h += `  <section id="studio">\n    <h2>Talks, Events & Updates</h2>\n    <ul>\n`;
+    h += STUDIO_ITEMS.map((s) => li(`<h3>${esc(s.title)}</h3><p>${esc(s.description)}</p>`)).join('');
+    h += `    </ul>\n  </section>\n`;
+
+    h += `  <section id="contact">\n    <h2>Contact</h2>\n    <p><a href="mailto:${esc(PROFILE.email)}">${esc(PROFILE.email)}</a></p>\n`;
+    if (isRealLink(PROFILE.links.linkedin)) h += `    <p><a href="${esc(PROFILE.links.linkedin)}">LinkedIn</a></p>\n`;
+    if (isRealLink(PROFILE.links.github)) h += `    <p><a href="${esc(PROFILE.links.github)}">GitHub</a></p>\n`;
+    h += `    <p><a href="${esc(PROFILE.links.resume)}">Resume (PDF)</a></p>\n  </section>\n`;
+    h += `  </main>\n</div>\n`;
+    return h;
 }
+
+function buildLlmsTxt() {
+    let t = `# ${PROFILE.fullName}\n> ${PROFILE.role}. ${PROFILE.summary}\n\n`;
+    t += `Contact: ${PROFILE.email}\nResume: ${SITE_URL}${PROFILE.links.resume}\n\n`;
+    t += `## Experience\n` + EXPERIENCE.map((x) => `- ${x.role}, ${x.org} (${x.period}): ${x.points.join(' ')}`).join('\n') + '\n\n';
+    t += `## Projects\n` + PROJECTS.map((p) => `- [${p.title}](${isRealLink(p.url) ? p.url : SITE_URL + '/gallery'}): ${p.description} (Tech: ${p.tech.join(', ')})`).join('\n') + '\n\n';
+    t += `## Education\n` + EDUCATION.map((e) => `- ${e.degree}, ${e.school} (${e.period})`).join('\n') + '\n\n';
+    t += `## Skills\n` + Object.entries(SKILLS).map(([g, items]) => `- ${g}: ${items.join(', ')}`).join('\n') + '\n\n';
+    t += `## Awards & Achievements\n` + awardItems().map((a) => `- ${a.label} (${a.date})`).join('\n') + '\n';
+    return t;
+}
+
+const ROUTES = ['/', '/about', '/gallery', '/studio', '/contact'];
+
+const buildRobotsTxt = () => `User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
+
+const buildSitemap = () =>
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+` +
+    ROUTES.map((r, i) => `  <url><loc>${SITE_URL}${r === '/' ? '/' : r}</loc><priority>${i === 0 ? '1.0' : '0.8'}</priority></url>
+`).join('') +
+    `</urlset>
+`;
 
 export function generateSeoHtml() {
-    let cachedLlmsContent = '';
-
-    async function getLlmsContent() {
-        if (!cachedLlmsContent) {
-            try {
-                const [globalInfo, projects, studio, awards, faqList] = await Promise.all([
-                    sanityClient.fetch(`*[_id == "globalInfo"][0]`),
-                    sanityClient.fetch(`*[_type == "galleryProject"]`),
-                    sanityClient.fetch(`*[_type == "studioItem"]`),
-                    sanityClient.fetch(`*[_type == "awardCertificate"]`),
-                    sanityClient.fetch(`*[_type == "faq"]`)
-                ]);
-                cachedLlmsContent = buildLlmsTxt(globalInfo, projects, studio, awards, faqList);
-            } catch (e) {
-                console.error('SEO Plugin Error: Failed to fetch Sanity data for llms.txt', e);
-                cachedLlmsContent = `# Tomasz Szmajda\n> Creative Developer\n`;
-            }
-        }
-        return cachedLlmsContent;
-    }
-
     return {
-        name: 'sanity-seo-plugin',
+        name: 'profile-seo-plugin',
 
-        // Serve llms.txt in local development mode
         configureServer(server) {
-            server.middlewares.use(async (req, res, next) => {
-                if (req.url === '/llms.txt') {
-                    const content = await getLlmsContent();
-                    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-                    res.end(content);
-                } else {
-                    next();
-                }
+            const files = { '/llms.txt': buildLlmsTxt, '/robots.txt': buildRobotsTxt, '/sitemap.xml': buildSitemap };
+            server.middlewares.use((req, res, next) => {
+                const build = files[req.url];
+                if (!build) return next();
+                res.setHeader('Content-Type', req.url.endsWith('.xml') ? 'application/xml' : 'text/plain; charset=utf-8');
+                res.end(build());
             });
         },
 
-        // This hook runs when Vite generates or serves index.html
-        async transformIndexHtml(html) {
-            try {
-                // Fetch all data in parallel
-                const [globalInfo, projects, studio, awards, faqList] = await Promise.all([
-                    sanityClient.fetch(`*[_id == "globalInfo"][0]`),
-                    sanityClient.fetch(`*[_type == "galleryProject"]`),
-                    sanityClient.fetch(`*[_type == "studioItem"] { ..., "thumbnailUrl": frontTexture.asset->url }`),
-                    sanityClient.fetch(`*[_type == "awardCertificate"]`),
-                    sanityClient.fetch(`*[_type == "faq"]`)
-                ]);
-
-                // Fallback values if globalInfo is not yet created in Sanity
-                const siteTitle = globalInfo?.siteTitle || 'ITom - Creative Developer';
-                const siteDescription = globalInfo?.siteDescription || 'Interactive 3D portfolio of a creative web developer.';
-                const aboutMe = globalInfo?.aboutMe || 'I am a creative developer specializing in 3D web experiences.';
-
-                // Cache llms.txt content for later bundle emission
-                cachedLlmsContent = buildLlmsTxt(globalInfo, projects, studio, awards, faqList);
-
-                // ====== PART 1: Build the semantic HTML string ======
-                let seoHtml = `\n<div id="seo-content" class="sr-only-seo">\n`;
-                
-                seoHtml += `  <header>\n`;
-                seoHtml += `    <h1>${siteTitle}</h1>\n`;
-                seoHtml += `    <p>${siteDescription}</p>\n`;
-                seoHtml += `  </header>\n`;
-
-                seoHtml += `  <section id="about">\n`;
-                seoHtml += `    <h2>About Me</h2>\n`;
-                seoHtml += `    <p>${aboutMe}</p>\n`;
-                if (globalInfo?.githubUrl) seoHtml += `    <a href="${globalInfo.githubUrl}">GitHub</a>\n`;
-                if (globalInfo?.linkedinUrl) seoHtml += `    <a href="${globalInfo.linkedinUrl}">LinkedIn</a>\n`;
-                seoHtml += `  </section>\n`;
-
-                if (projects && projects.length > 0) {
-                    seoHtml += `  <section id="projects">\n    <h2>Projects</h2>\n    <ul>\n`;
-                    projects.forEach(p => {
-                        seoHtml += `      <li>\n        <h3>${p.seoTitle || p.title}</h3>\n        <p>${p.seoDescription || p.description || ''}</p>\n        ${p.url ? `<a href="${p.url}">Visit ${p.seoTitle || p.title}</a>\n` : ''}      </li>\n`;
-                    });
-                    seoHtml += `    </ul>\n  </section>\n`;
-                }
-
-                if (studio && studio.length > 0) {
-                    seoHtml += `  <section id="studio">\n    <h2>The Studio (Content)</h2>\n    <ul>\n`;
-                    studio.forEach(s => {
-                        seoHtml += `      <li>\n        <h3>${s.seoTitle || s.title} (${s.platform})</h3>\n        <p>${s.seoDescription || s.description || ''}</p>\n        ${s.url ? `<a href="${s.url}">View Content</a>\n` : ''}      </li>\n`;
-                    });
-                    seoHtml += `    </ul>\n  </section>\n`;
-                }
-
-                if (awards && awards.length > 0) {
-                    seoHtml += `  <section id="awards">\n    <h2>Awards & Certificates</h2>\n    <ul>\n`;
-                    awards.forEach(a => {
-                        seoHtml += `      <li>\n        <h3>${a.seoTitle || a.title}</h3>\n        <p>${a.category} - ${a.date}</p>\n        <p>${a.seoDescription || ''}</p>\n        ${a.url ? `<a href="${a.url}">Link</a>\n` : ''}      </li>\n`;
-                    });
-                    seoHtml += `    </ul>\n  </section>\n`;
-                }
-
-                // FAQ Section (GEO/AI search optimizer fallback)
-                if (faqList && faqList.length > 0) {
-                    seoHtml += `  <section id="faq">\n`;
-                    seoHtml += `    <h2>Frequently Asked Questions (FAQ)</h2>\n`;
-                    faqList.forEach(item => {
-                        seoHtml += `    <article>\n`;
-                        seoHtml += `      <h3>${item.question}</h3>\n`;
-                        seoHtml += `      <p>${item.answer}</p>\n`;
-                        seoHtml += `    </article>\n`;
-                    });
-                    seoHtml += `  </section>\n`;
-                }
-
-                seoHtml += `</div>\n`;
-
-                // ====== PART 2: Build dynamic JSON-LD ======
-                const jsonLdSchemas = buildJsonLd(globalInfo, projects, studio, awards, faqList);
-                const jsonLdScript = `\n  <!-- Dynamic Structured Data (JSON-LD) — generated from Sanity at build time -->\n  <script type="application/ld+json">\n${JSON.stringify(jsonLdSchemas, null, 2)}\n  </script>\n`;
-
-                // ====== PART 3: Transform HTML ======
-                // Update the <title> tag
-                let transformedHtml = html.replace(
-                    /<title>(.*?)<\/title>/,
-                    `<title>${siteTitle}</title>`
-                );
-                
-                // Add or replace meta description
-                if (transformedHtml.includes('<meta name="description"')) {
-                    transformedHtml = transformedHtml.replace(
-                        /<meta name="description" content="(.*?)"\s*\/?>/,
-                        `<meta name="description" content="${siteDescription}" />`
-                    );
-                } else {
-                    transformedHtml = transformedHtml.replace(
-                        '</head>',
-                        `  <meta name="description" content="${siteDescription}" />\n</head>`
-                    );
-                }
-
-                // Update Open Graph dynamic metadata
-                transformedHtml = transformedHtml
-                    .replace(
-                        /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/i,
-                        `<meta property="og:title" content="${siteTitle}" />`
-                    )
-                    .replace(
-                        /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/i,
-                        `<meta property="og:description" content="${siteDescription}" />`
-                    );
-
-                // Update Twitter card dynamic metadata
-                transformedHtml = transformedHtml
-                    .replace(
-                        /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/i,
-                        `<meta name="twitter:title" content="${siteTitle}" />`
-                    )
-                    .replace(
-                        /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/i,
-                        `<meta name="twitter:description" content="${siteDescription}" />`
-                    );
-
-                // Inject dynamic JSON-LD right before </head> (next to the existing static one)
-                transformedHtml = transformedHtml.replace('</head>', `${jsonLdScript}</head>`);
-
-                // Replace the static placeholder with the dynamic one to prevent duplicate #seo-content and double h1s
-                if (transformedHtml.includes('id="seo-content"')) {
-                    transformedHtml = transformedHtml.replace(
-                        /<div id="seo-content" class="sr-only-seo">[\s\S]*?<\/div>/,
-                        seoHtml
-                    );
-                } else {
-                    // Fallback injection if the template doesn't contain the static block
-                    transformedHtml = transformedHtml.replace('</body>', `${seoHtml}</body>`);
-                }
-
-                return transformedHtml;
-            } catch (error) {
-                console.error('SEO Plugin Error: Failed to fetch Sanity data', error);
-                // Return original HTML on failure so we don't break the build
-                return html;
-            }
+        transformIndexHtml(html) {
+            const jsonLd = `  <script type="application/ld+json">\n${JSON.stringify(buildJsonLd(), null, 2)}\n  </script>\n`;
+            return html
+                .replaceAll('__SITE_URL__', SITE_URL)
+                .replace('</head>', `${jsonLd}</head>`)
+                .replace(/<div id="seo-content" class="sr-only-seo">[\s\S]*?<!-- \/seo-content -->/, buildSeoHtml());
         },
 
-        // Emit llms.txt to the build output directory
-        async generateBundle() {
-            const content = await getLlmsContent();
-            this.emitFile({
-                type: 'asset',
-                fileName: 'llms.txt',
-                source: content
-            });
-        }
+        generateBundle() {
+            this.emitFile({ type: 'asset', fileName: 'llms.txt', source: buildLlmsTxt() });
+            this.emitFile({ type: 'asset', fileName: 'robots.txt', source: buildRobotsTxt() });
+            this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildSitemap() });
+        },
     };
 }

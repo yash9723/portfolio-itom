@@ -14,13 +14,14 @@ import GlobalOverlay from './components/ui/GlobalOverlay';
 import ScreenReaderOverlay from './components/ui/ScreenReaderOverlay';
 import { useDocumentMeta } from './hooks/useDocumentMeta';
 import posthog from 'posthog-js';
-import { loadSanityData } from './hooks/useSanityData';
 
-// Initialize PostHog
-posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
-  api_host: import.meta.env.VITE_POSTHOG_HOST,
-  person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
-});
+// Initialize PostHog only when a key is configured (see .env.example)
+if (import.meta.env.VITE_POSTHOG_KEY) {
+  posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
+    api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://eu.i.posthog.com',
+    person_profiles: 'identified_only',
+  });
+}
 
 // Lazy load the heavy 3D experience
 const Experience = lazy(() => import('./components/canvas/Experience'));
@@ -224,9 +225,6 @@ export default function App() {
   // Preload browser-based images (for standard <img> tags) immediately upon mounting App
   // This ensures they are in the network waterfall during the initial loading phase.
   useEffect(() => {
-    // Eagerly preload Sanity CMS data and images
-    loadSanityData();
-
     const filteredImages = filterTexturesByDevice(IMAGE_ASSETS, supportsHover);
     // console.log(`[Preload] Triggering browser-level image preloads for ${filteredImages.length} assets.`);
     filteredImages.forEach(path => preloadBrowserImage(path));

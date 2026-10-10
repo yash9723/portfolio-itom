@@ -105,17 +105,17 @@ const EntranceDoors = ({
 
     // Rubber Duck Debugging Quotes
     const duckQuotes = [
-        "Have you tried console.log()?",
-        "Did you clear the cache?",
-        "It works on my machine! 🤷",
-        "Have you turned it off and on again?",
-        "Maybe it's a CSS issue?",
-        "Check for missing semicolons!",
-        "Did you read the error message?",
-        "Have you tried Stack Overflow?",
+        "Did you check the waveform?",
+        "Is it a blocking vs non-blocking thing?",
+        "Missing a default in that case statement?",
+        "Have you tried $display()?",
+        "Timing violation? Slow the clock! ⏱️",
+        "Is the reset active-low? 🤔",
+        "Did you probe the right pin?",
         "Is it plugged in?",
-        "Works in production! 🚀",
-    ];
+        "Check your ground connection!",
+        "Synthesizes on my machine! 🤷",
+    ]
 
     // Bug Click Handler
     const handleBugClick = (e) => {
@@ -298,7 +298,7 @@ const EntranceDoors = ({
             ease: 'power2.out'
         }, 0.1);
 
-        // Camera flies through - STOP CLOSER to avatar/ITOM
+        // Camera flies through - STOP CLOSER to avatar/hero name
         tl.to(camera.position, {
             z: 11,  // Closer stop point (was 11)
             y: 0.2, // Match hook's base Y position

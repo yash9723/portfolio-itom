@@ -2,14 +2,14 @@ import { useRef, useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { CONTENT_DATA, PLATFORM_CONFIG, getLatestContent } from './contentData';
+import { PLATFORM_CONFIG } from './contentData';
 import { useScene } from '../../../../context/SceneContext';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { TextureLoader } from 'three';
 import FloatingCodeParticles from './FloatingCodeParticles';
 import { PositionalAudio } from '@react-three/drei';
 import { useAudio } from '../../../../context/AudioManager';
-import { useStudioContent } from '../../../../hooks/useSanityData';
+import { useStudioContent } from '../../../../hooks/useContentData';
 import '../../shaders/RevealMaterial';
 import { isTouchDevice } from '../../../../utils/deviceDetect';
 import { usePaintMaterial } from '../Gallery/usePaintMaterial';
@@ -107,9 +107,8 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     const { globalVolume, isMuted } = useAudio();
     const effectiveVolume = isMuted ? 0 : AUDIO_SETTINGS.volume * globalVolume;
 
-    // Pobieranie danych z Sanity.io (fallback do starych danych)
-    const sanityContent = useStudioContent();
-    const activeContent = sanityContent || CONTENT_DATA;
+    // Studio items live in src/data/profile.js
+    const activeContent = useStudioContent();
 
     const audioRef = useRef();
     useEffect(() => {
@@ -614,7 +613,7 @@ const MonitorBlock = memo(({ item, meshRef, isSelected, onMonitorClick, disabled
     const matRef5 = useRef(); // -Z back
     const matRefs = [matRef0, matRef1, matRef2, matRef3, matRef4, matRef5];
 
-    // Check device types (prioritize Sanity 'device' field, fallback to platform defaults)
+    // Check device types (prioritize an explicit 'device' field, fallback to platform defaults)
     const deviceShape = item.device || (PLATFORM_CONFIG[item.platform]?.shape) || 'monitor';
     const isBlogMonitor = deviceShape === 'monitor';
     const isTvMonitor = deviceShape === 'tv';

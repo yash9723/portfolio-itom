@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useScene } from '../context/SceneContext';
+import { PROFILE, SITE_URL } from '../data/profile';
 
 /**
  * useDocumentMeta — Dynamic Meta Tags & Virtual Routing (History API)
@@ -9,31 +10,33 @@ import { useScene } from '../context/SceneContext';
  * browser back/forward buttons for seamless navigation.
  */
 
+const NAME = PROFILE.fullName;
+
 const ROOM_META = {
     null: {
         path: '/',
-        title: 'ITom — Creative 3D Portfolio',
-        description: 'Interactive 3D developer portfolio by Tomasz "ITom" Szmajda. Explore WebGL experiments, React projects & GSAP animations in a hand-drawn gallery.',
+        title: `${NAME} | VLSI & Embedded Portfolio`,
+        description: `Interactive 3D portfolio of ${NAME}, an ECE student building VLSI, embedded and IoT systems. Explore projects like BitFlow and Trana-Trace in a hand-drawn world.`,
     },
     about: {
         path: '/about',
-        title: 'About Me — ITom Portfolio',
-        description: 'Learn about Tomasz "ITom" Szmajda — a creative frontend developer specializing in 3D web experiences, React, Three.js, and GSAP animations.',
+        title: `About | ${NAME}`,
+        description: `About ${NAME}: B.Tech ECE at Aditya University, President of the OPTICA Student Chapter, E-Cell core team member and founding member of NAVIEL.`,
     },
     gallery: {
         path: '/gallery',
-        title: 'Gallery & Projects — ITom Portfolio',
-        description: 'Browse the interactive 3D gallery of web development projects by ITom. Each project is displayed as a hand-drawn card you can flip and explore.',
+        title: `Projects | ${NAME}`,
+        description: `Projects by ${NAME}: the BitFlow RTL coding platform, the Trana-Trace VLSI security chip, NAVIEL safety hardware and OPTICA chapter initiatives.`,
     },
     studio: {
         path: '/studio',
-        title: 'The Studio — ITom Portfolio',
-        description: 'Explore ITom\'s content studio — YouTube videos, blog posts, and TikToks displayed on floating monitors in an immersive 3D space.',
+        title: `Talks & Events | ${NAME}`,
+        description: `Talks, events and updates from ${NAME}: Viksit Bharat speech wins, OPTICA workshops, E-Summit and Creathon.`,
     },
     contact: {
         path: '/contact',
-        title: 'Contact — ITom Portfolio',
-        description: 'Get in touch with Tomasz "ITom" Szmajda. Find social media links and contact information in this interactive 3D contact room.',
+        title: `Contact | ${NAME}`,
+        description: `Get in touch with ${NAME}: email, LinkedIn, GitHub and resume.`,
     },
 };
 
@@ -82,12 +85,12 @@ export function useDocumentMeta() {
         if (ogDesc) ogDesc.setAttribute('content', meta.description);
 
         const ogUrl = document.querySelector('meta[property="og:url"]');
-        if (ogUrl) ogUrl.setAttribute('content', `https://itomdev.com${meta.path}`);
+        if (ogUrl) ogUrl.setAttribute('content', `${SITE_URL}${meta.path}`);
 
         // Update canonical link to ensure virtual routes are correctly indexable as separate pages
         const canonicalTag = document.querySelector('link[rel="canonical"]');
         if (canonicalTag) {
-            canonicalTag.setAttribute('href', `https://itomdev.com${meta.path}`);
+            canonicalTag.setAttribute('href', `${SITE_URL}${meta.path}`);
         }
 
         // Push to browser history (only if not handling a popstate event and room actually changed)
