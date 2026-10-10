@@ -960,7 +960,7 @@ const SkillBalloon = ({ config, revealFactorRef, spreadFactorRef, timeRef }) => 
     };
 
     // Plane aspect per balloon size (large balloons come from the wider template).
-    const aspect = config.size === 'large' ? 736 / 1447 : 631 / 1482;
+    const aspect = texture.image ? texture.image.width / texture.image.height : 0.5;
     const baseHeight = SIZE_MULTIPLIERS[config.size];
 
     const outerGroupRef = useRef();

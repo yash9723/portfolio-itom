@@ -6,7 +6,7 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/start", "destination": "/start/index.html" },
-    { "source": "/(about|gallery|studio|contact)", "destination": "/index.html" }
+    { "source": "/:room(about|gallery|studio|contact)/?", "destination": "/index.html" }
   ],
   "headers": [
     {

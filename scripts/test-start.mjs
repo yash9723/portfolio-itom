@@ -80,11 +80,11 @@ test('all destinations are present in HTML, and the portfolio appears once', () 
   const anchors = [...html.matchAll(/<a\b([^>]+)>([\s\S]*?)<\/a>/g)];
   assert.equal(anchors.length, 7); // Two work links, four profiles and the skip link.
   assert.equal(anchors.filter(match => /href="\/"/.test(match[1])).length, 1);
-  assert.equal(anchors.filter(match => /data-pending/.test(match[1])).length, 2);
+  assert.equal(anchors.filter(match => /data-pending/.test(match[1])).length, 0);
   const urls = anchors.map(match => match[1].match(/href="((?:https|mailto):[^"]+)"/)?.[1]).filter(Boolean);
   assert.deepEqual(urls, [
-    'https://github.com/',
-    'https://www.linkedin.com/',
+    'https://github.com/abhilashjoyealuppalaguptha-netizen',
+    'https://www.linkedin.com/in/abhilash-joyeal-uppalaguptha-0a4b88325/',
     'https://bitflow-2-0.onrender.com',
     'mailto:abhilashjoyealuppalaguptha@gmail.com',
   ]);

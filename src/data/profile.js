@@ -6,7 +6,7 @@
  * TODO(owner): fill the links marked TODO below.
  */
 
-export const SITE_URL = 'https://abhilash-portfolio.vercel.app'; // TODO: replace with the real Vercel / custom domain
+export const SITE_URL = 'https://portfolio-abhilash.vercel.app'; // Vercel's default for a project named portfolio-abhilash - update if the domain differs
 
 const BITFLOW_URL = 'https://bitflow-2-0.onrender.com'; // TODO: confirm
 
@@ -27,8 +27,8 @@ export const PROFILE = {
         'President of the OPTICA Student Chapter, leading initiatives in deep tech, and passionate about developing ' +
         'defense-grade and socially impactful systems, including safety tech and autonomous platforms.',
     links: {
-        github: 'https://github.com/', // TODO: GitHub profile URL
-        linkedin: 'https://www.linkedin.com/', // TODO: LinkedIn profile URL
+        github: 'https://github.com/abhilashjoyealuppalaguptha-netizen',
+        linkedin: 'https://www.linkedin.com/in/abhilash-joyeal-uppalaguptha-0a4b88325/',
         email: 'mailto:abhilashjoyealuppalaguptha@gmail.com',
         bitflow: BITFLOW_URL,
         resume: '/resume.pdf',
@@ -97,7 +97,7 @@ export const PROJECTS = [
         title: 'TRANA-TRACE',
         front: G + 'tranatraceprzod.webp',
         painted: G + 'tranatraceprzod_painted.webp',
-        url: 'https://github.com/', // TODO: Trana-Trace link
+        url: 'https://github.com/abhilashjoyealuppalaguptha-netizen', // TODO: Trana-Trace repo link, if public
         description:
             'A chip system that helps with mobile security in times of mobile theft and battery drain. ' +
             'I designed the entire VLSI architecture using FSM concepts in Verilog, working across VLSI, IoT and web development.',
@@ -109,7 +109,7 @@ export const PROJECTS = [
         title: 'NAVIEL',
         front: G + 'navielprzod.webp',
         painted: G + 'navielprzod_painted.webp',
-        url: 'https://www.linkedin.com/', // TODO: NAVIEL link
+        url: 'https://www.linkedin.com/in/abhilash-joyeal-uppalaguptha-0a4b88325/', // TODO: NAVIEL page, if any
         description:
             'A startup initiative creating better hardware for citizen safety. ' +
             'As a founding member I work with the team on multidisciplinary ideas and tech that common people need.',
@@ -121,7 +121,7 @@ export const PROJECTS = [
         title: 'OPTICA CHAPTER',
         front: G + 'opticaprzod.webp',
         painted: G + 'opticaprzod_painted.webp',
-        url: 'https://www.optica.org/', // TODO: chapter page
+        url: 'https://www.linkedin.com/in/abhilash-joyeal-uppalaguptha-0a4b88325/', // TODO: OPTICA chapter page, if any
         description:
             'Leading the OPTICA Student Chapter: technical events, workshops and knowledge sessions on photonics, optics ' +
             'and advanced technologies, plus initiatives that connect students with research and innovation.',
@@ -280,7 +280,7 @@ export const STUDIO_ITEMS = [
         platform: 'event',
         title: 'VEDA Student Symposium',
         description: 'Moments from VEDA, the student symposium at Aditya University.',
-        date: '12 Sep',
+        date: '12th Sep', // year not known; unparseable dates sort last in the Studio
         photo: 'veda',
     },
     {

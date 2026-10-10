@@ -125,7 +125,7 @@ export const AchievementsProvider = ({ children }) => {
 
             // Send event to PostHog
             const achievementData = ACHIEVEMENTS[id];
-            if (achievementData) {
+            if (achievementData && posthog.__loaded) { // analytics is optional (see .env.example)
                 posthog.capture('achievement_unlocked', {
                     achievement_id: id,
                     achievement_title: achievementData.title,

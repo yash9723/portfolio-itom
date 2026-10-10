@@ -11,8 +11,7 @@ import { PROFILE, SITE_URL, EDUCATION, EXPERIENCE, PROJECTS, SKILLS, AWARDS, STU
 
 const esc = (s = '') => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// Placeholder links (TODO in profile.js) should not be advertised to crawlers.
-const isRealLink = (url) => !!url && !/^https:\/\/(www\.)?(github|linkedin)\.com\/?$/.test(url);
+const isRealLink = (url) => !!url;
 
 const awardItems = () => Object.values(AWARDS).flatMap((group) => group.items);
 const allSkills = () => [...new Set(Object.values(SKILLS).flat())];
