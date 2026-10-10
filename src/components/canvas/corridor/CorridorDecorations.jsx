@@ -5,6 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import gsap from 'gsap';
 import '../shaders/RevealMaterial';
 import { isTouchDevice } from '../../../utils/deviceDetect';
+import { EVENT_PHOTOS } from '../../../data/profile';
 /**
  * CorridorDecorations - Dekoracje korytarza.
  * 
@@ -27,6 +28,20 @@ const tempQuat = new THREE.Quaternion();
 
 
 const CABIN_SKETCH_URL = '/fonts/CabinSketch-Regular.ttf';
+
+// Event photo inside a large frame: pencil sketch that paints into colour on hover, caption under the frame.
+// The frame's opening is ~2.0 x 0.96 units (see scripts/art/gen-art.mjs corridorPhotos).
+const photoFrame = (photo, frameHeight) => ({
+    image: photo.image,
+    imagePainted: photo.painted,
+    imageWidth: 2.0,
+    imageHeight: 0.96,
+    signature: `${photo.title} - ${photo.place}`,
+    signatureX: 0,
+    signatureY: -frameHeight / 2 - 0.12,
+    signatureSize: 0.09,
+    signatureColor: '#333333',
+});
 
 const PictureContent = ({ imagePath, imagePaintedPath, width, height, isPainted }) => {
     const texture = useTexture(imagePath);
@@ -404,11 +419,7 @@ const CorridorDecorations = ({ segmentLength, zOffset, corridorWidth = 4, corrid
             height: 2.5 / 1.785,
             y: 0.25,
             id: 'frame-3',
-            signature: "Empty canvas!\nWant your art here?\nContact me!",
-            signatureX: 0,
-            signatureY: 0,
-            signatureSize: 0.12,
-            signatureColor: '#333333'
+            ...photoFrame(EVENT_PHOTOS[0], 2.5 / 1.785),
         },
         {
             z: zOffset - 55,         // Między About a Connect (relZ -50 do -60)
@@ -417,11 +428,7 @@ const CorridorDecorations = ({ segmentLength, zOffset, corridorWidth = 4, corrid
             height: 2.5 / 1.785,
             y: 0.35,
             id: 'frame-4',
-            signature: "Empty canvas!\nWant your art here?\nContact me!",
-            signatureX: 0,
-            signatureY: 0,
-            signatureSize: 0.12,
-            signatureColor: '#333333'
+            ...photoFrame(EVENT_PHOTOS[1], 2.5 / 1.785),
         },
     ], [zOffset]);
 

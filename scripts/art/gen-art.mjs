@@ -7,7 +7,7 @@
 import sharp from 'sharp';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { PROFILE, PROJECTS, BALLOONS, STUDIO_ITEMS, AWARDS } from '../../src/data/profile.js';
+import { PROFILE, PROJECTS, BALLOONS, STUDIO_ITEMS, AWARDS, EVENT_PHOTOS } from '../../src/data/profile.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url)).replace(/\\/g, '/');
 const TPL = `${ROOT}scripts/art/templates/`;
@@ -123,6 +123,45 @@ async function figure(height, { crop, tilt = 0 } = {}) {
   if (crop) out = await sharp(out).extract({ left: 0, top: 0, width: W, height: H - pad * 2 }).png().toBuffer();
   if (tilt) out = await sharp(out).rotate(tilt, { background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
   return sharp(out).png().toBuffer({ resolveWithObject: true });
+}
+
+// ---------- event photos ----------
+
+/** Colour-dodge pencil sketch of an RGB buffer (paper white, graphite lines). */
+async function pencilize(input) {
+  const { data: grey, info } = await sharp(input).greyscale().median(3).toColourspace('b-w').raw().toBuffer({ resolveWithObject: true });
+  const { width: w, height: h } = info;
+  const inv = await sharp(grey, { raw: { width: w, height: h, channels: 1 } }).negate().blur(Math.max(2, w / 180)).toColourspace('b-w').raw().toBuffer();
+  const out = Buffer.alloc(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const v = inv[i] >= 255 ? 255 : Math.min(255, (grey[i] * 255) / (255 - inv[i]));
+    out[i] = Math.max(0, 255 - Math.min(255, (255 - v) * 2.2));
+  }
+  // warm paper tone so it matches the rest of the sketchbook
+  return sharp(out, { raw: { width: w, height: h, channels: 1 } }).toColourspace('b-w')
+    .tint({ r: 250, g: 247, b: 240 }).png().toBuffer();
+}
+
+/** An event photo cover-cropped to w x h (cropTop trims the banner/ceiling first). Painted = colour, else pencil. */
+async function eventPhoto(id, w, h, painted) {
+  const ev = EVENT_PHOTOS.find((e) => e.id === id);
+  const src = `${ROOT}scripts/art/events/${ev.file}`;
+  const m = await meta(src);
+  const top = Math.round(m.height * ev.cropTop);
+  const colour = await sharp(src).extract({ left: 0, top, width: m.width, height: m.height - top })
+    .resize(Math.round(w), Math.round(h), { fit: 'cover', position: 'top' })
+    .modulate({ saturation: 1.05 }).sharpen({ sigma: 0.6 }).png().toBuffer();
+  return painted ? colour : pencilize(colour);
+}
+
+async function corridorPhotos() {
+  console.log('corridor photos');
+  // Frame opening is ~2.08:1 (2.0 x 0.96 units inside ramkanazdjecieduza).
+  for (const ev of EVENT_PHOTOS) {
+    for (const painted of [false, true]) {
+      await save(sharp(await eventPhoto(ev.id, 1600, 768, painted)), `${OUT}${(painted ? ev.painted : ev.image).slice(1)}`, { quality: 84 });
+    }
+  }
 }
 
 // ---------- avatar ----------
@@ -332,8 +371,8 @@ async function sticker(W, H, spot, label, painted, accent) {
 // Where the old logo sits on each balloon template (fractions of width/height).
 const BALLOON_SPOT = { large: { cx: 0.5, cy: 0.305, r: 0.36 }, medium: { cx: 0.507, cy: 0.272, r: 0.375 }, small: { cx: 0.494, cy: 0.272, r: 0.375 } };
 // Hue shifts give each painted balloon its own colour (large=blue, medium=yellow, small=orange bases).
-const BALLOON_HUE = { verilog: 0, vlsi: 70, esp32: 230, python: 0, c: 160, raspi: 300, matlab: 0, cadence: 320, pcb: 90, html: 200 };
-const BALLOON_INK = { verilog: '#1f4e8c', vlsi: '#5a2d91', esp32: '#2e7d32', python: '#8a6d00', c: '#1565c0', raspi: '#c2185b', matlab: '#d84315', cadence: '#b71c1c', pcb: '#2e7d32', html: '#1565c0' };
+const BALLOON_HUE = { verilog: 0, vlsi: 70, esp32: 230, python: 0, c: 160, raspi: 300, matlab: 0, cadence: 320, pcb: 90, html: 200, sv: 120, iot: 250, robotics: 330, docker: 170 };
+const BALLOON_INK = { verilog: '#1f4e8c', vlsi: '#5a2d91', esp32: '#2e7d32', python: '#8a6d00', c: '#1565c0', raspi: '#c2185b', matlab: '#d84315', cadence: '#b71c1c', pcb: '#2e7d32', html: '#1565c0', sv: '#00796b', iot: '#2e7d32', robotics: '#ad1457', docker: '#0277bd' };
 
 async function balloons() {
   console.log('balloons');
@@ -384,6 +423,22 @@ async function certificates() {
   const items = Object.values(AWARDS).flatMap((g) => g.items.map((i) => ({ ...i, group: g.title })));
   for (const item of items) {
     const W = 600, H = 846;
+    if (item.photo) {
+      // photo card: framed picture + caption instead of the medal
+      const pic = await eventPhoto(item.photo, 480, 300, true);
+      const base = svg(W, H, `<rect width="${W}" height="${H}" fill="#fbf7ec"/>` +
+        sk(`<rect x="24" y="24" width="${W - 48}" height="${H - 48}" rx="6"/><rect x="40" y="40" width="${W - 80}" height="${H - 80}" rx="4"/>
+            <rect x="56" y="76" width="488" height="308"/><path d="M150,700 L450,700"/>`, 4), 23);
+      const layers = [
+        { input: pic, left: 60, top: 80 },
+        await textAt(item.group.toUpperCase(), 300, 440, { font: 'sketchBold', size: 40, maxW: 480 }),
+        await textAt(item.label, 300, 530, { font: 'sketchBold', size: 54, maxW: 480, maxH: 150, width: 480 }),
+        await textAt(item.date, 300, 625, { font: 'sketch', size: 40, maxW: 480 }),
+        await textAt(PROFILE.fullName, 300, 735, { font: 'sketch', size: 30, maxW: 440 }),
+      ];
+      await save(sharp(await png(base)).composite(layers), `${OUT}${item.image.slice(1)}`);
+      continue;
+    }
     const ribbon = `<path d="M260,170 L230,60 L280,60 L300,140 L320,60 L370,60 L340,170 Z" fill="#e53935"/>`;
     const medal = `<circle cx="300" cy="230" r="80" fill="#ffca28"/>`;
     const base = svg(W, H, `<rect width="${W}" height="${H}" fill="#fbf7ec"/>` + fillC(ribbon + medal) +
@@ -452,6 +507,18 @@ async function studioScreens() {
       const { width: W, height: H } = await meta(tpl);
       const win = DEVICE[dev].win;
       const x0 = W * win.x0, y0 = H * win.y0, w = W * (win.x1 - win.x0), h = H * (win.y1 - win.y0);
+      if (item.photo) {
+        // photo screen: the picture fills the screen, caption on a paper strip at the bottom
+        const pic = await eventPhoto(item.photo, w, h, painted);
+        const strip = await png(svg(W, H, `<rect x="${x0}" y="${y0 + h * 0.78}" width="${w}" height="${h * 0.22}" fill="#fbf7ec" fill-opacity="0.92"/>` +
+          sk(`<line x1="${x0}" y1="${y0 + h * 0.78}" x2="${x0 + w}" y2="${y0 + h * 0.78}"/>`, Math.max(2, W / 400)), 29));
+        await save(sharp(tpl).composite([
+          { input: pic, left: Math.round(x0), top: Math.round(y0) },
+          { input: strip },
+          await textAt(item.title, x0 + w / 2, y0 + h * 0.89, { font: 'sketchBold', size: Math.round(h * 0.12), maxW: w * 0.92, maxH: h * 0.18 }),
+        ]), `${OUT}${(painted ? item.paintedFrontTexture : item.frontTexture).slice(1)}`);
+        continue;
+      }
       const vertical = dev === 'phone';
       const s = vertical ? w * 0.42 : h * 0.42;
       const icx = vertical ? x0 + w / 2 : x0 + w * 0.17, icy = vertical ? y0 + h * 0.25 : y0 + h * 0.5;
@@ -596,7 +663,7 @@ async function brand() {
   }
 }
 
-const GROUPS = { avatars, galleryCards, techLogos, balloons, islands, certificates, monitorBezel, studioScreens, door, entranceDoors, wallArt, brand };
+const GROUPS = { avatars, corridorPhotos, galleryCards, techLogos, balloons, islands, certificates, monitorBezel, studioScreens, door, entranceDoors, wallArt, brand };
 if (only && !GROUPS[only]) throw new Error(`Unknown group "${only}". Groups: ${Object.keys(GROUPS).join(', ')}`);
 for (const [name, fn] of Object.entries(GROUPS)) {
   if (!only || only === name) await fn();

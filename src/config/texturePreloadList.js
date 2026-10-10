@@ -3,7 +3,7 @@
  * Everything loads during the initial preloader for zero stutter when entering rooms.
  * Person-specific textures are derived from src/data/profile.js.
  */
-import { PROJECTS, AWARDS, JOURNEY, BALLOONS, STUDIO_ITEMS } from '../data/profile.js';
+import { PROJECTS, AWARDS, JOURNEY, BALLOONS, STUDIO_ITEMS, EVENT_PHOTOS } from '../data/profile.js';
 
 const withPainted = (path) => [path, path.replace('.webp', '_painted.webp')];
 
@@ -89,6 +89,8 @@ export const CORRIDOR_TEXTURES = [
     '/textures/corridor/szafkaprzodgora.webp',
     '/textures/corridor/rysuneknaobraz1.webp',
     '/textures/corridor/rysuneknaobrazek3.webp',
+    // Event photos in the corridor frames
+    ...EVENT_PHOTOS.flatMap(p => [p.image, p.painted]),
     // DoorSection extras
     '/textures/corridor/strzalka.webp',
     '/textures/corridor/doors/door_back.webp',

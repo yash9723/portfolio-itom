@@ -132,10 +132,23 @@ export const PROJECTS = [
 
 export const SKILLS = {
     'Core Domains': ['VLSI Design', 'IoT & Embedded Systems', 'Full Stack'],
-    'Programming & Hardware': ['Verilog', 'C', 'Python', 'HTML', 'CSS', 'MATLAB', 'ESP32', 'Microcontrollers', 'Raspberry Pi', 'Simple robots'],
-    'Tools & Platforms': ['Cadence', 'MATLAB', 'PCB Design'],
+    'Programming & Hardware': ['Verilog', 'SystemVerilog', 'C', 'Python', 'HTML', 'CSS', 'MATLAB', 'ESP32', 'Microcontrollers', 'Raspberry Pi', 'Robotics'],
+    'Tools & Platforms': ['Cadence', 'MATLAB', 'PCB Design', 'Icarus Verilog', 'Docker', 'FastAPI'],
     'Leadership & Execution': ['Public Speaking', 'Team Leadership', 'Startup Strategy'],
 };
+
+/**
+ * Event photos: hung in the corridor's picture frames and reused in the Studio and About rooms.
+ * `file` / `cropTop` are only read by scripts/art/gen-art.mjs (source in scripts/art/events/).
+ */
+export const EVENT_PHOTOS = [
+    { id: 'veda', title: 'VEDA Student Symposium', place: 'Aditya University', file: 'veda.jpg', cropTop: 0.105 },
+    { id: 'techhub', title: 'Technical Hub - Project Space', place: 'Aditya University', file: 'techhub.jpg', cropTop: 0.11 },
+].map((p) => ({
+    ...p,
+    image: `/textures/corridor/photo_${p.id}.webp`,
+    painted: `/textures/corridor/photo_${p.id}_painted.webp`,
+}));
 
 const A = '/textures/about/';
 
@@ -169,10 +182,12 @@ export const AWARDS = {
         id: 'award-other',
         cardLabel: 'BUILDS',
         layout: 'certificate_grid',
-        title: 'Things I Built',
+        title: 'Builds & Moments',
         items: [
             { label: 'BitFlow RTL Platform', date: 'Verilog / SystemVerilog', image: A + 'cert_bitflow.webp', url: BITFLOW_URL },
             { label: 'Trana-Trace Chip', date: 'FSM-based VLSI design', image: A + 'cert_tranatrace.webp', url: null },
+            { label: 'VEDA Student Symposium', date: 'Aditya University', image: A + 'cert_veda.webp', photo: 'veda', url: null },
+            { label: 'Technical Hub - Project Space', date: 'Aditya University', image: A + 'cert_techhub.webp', photo: 'techhub', url: null },
         ],
         platformConfig: { label: 'PROJECT', color: '#1a1a1a', icon: '🔧' },
     },
@@ -197,6 +212,10 @@ export const BALLOONS = [
     { key: 'cadence', label: 'Cadence', size: 'small', x: 5.5, y: 3, z: -0.7, phase: 2.8 },
     { key: 'pcb', label: 'PCB Design', size: 'small', x: -3, y: 4.5, z: -0.5, phase: 3.5 },
     { key: 'html', label: 'HTML/CSS', size: 'small', x: 3.5, y: 4, z: -0.6, phase: 4.5 },
+    { key: 'sv', label: 'System Verilog', size: 'small', x: -1.4, y: 5.4, z: -0.9, phase: 0.4 },
+    { key: 'iot', label: 'IoT', size: 'small', x: 1.5, y: 5.2, z: -0.9, phase: 2.6 },
+    { key: 'robotics', label: 'Robotics', size: 'small', x: -6.8, y: 4.2, z: -1.1, phase: 3.9 },
+    { key: 'docker', label: 'Docker', size: 'small', x: 6.8, y: 1.2, z: -1.1, phase: 5.1 },
 ].map((b) => ({
     ...b,
     texture: `${A}balloon_${b.key}.webp`,
@@ -255,6 +274,22 @@ export const STUDIO_ITEMS = [
         title: 'OPTICA Technical Workshops',
         description: 'Technical events and workshops connecting students with research and innovation opportunities.',
         date: 'Mar 2025',
+    },
+    {
+        id: 'event-veda',
+        platform: 'event',
+        title: 'VEDA Student Symposium',
+        description: 'Moments from VEDA, the student symposium at Aditya University.',
+        date: '12 Sep',
+        photo: 'veda',
+    },
+    {
+        id: 'event-techhub',
+        platform: 'event',
+        title: 'Technical Hub - Project Space',
+        description: 'Project Space showcase with the Technical Hub team at Aditya University.',
+        date: 'Technical Hub',
+        photo: 'techhub',
     },
     {
         id: 'update-bitflow',

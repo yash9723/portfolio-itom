@@ -30,13 +30,14 @@ in `profile.js`, and the GitHub/LinkedIn links in `public/start/index.html`.
 ### Regenerating the artwork
 
 Textures that show personal content (photo avatar with a sticker border, project cards, balloons, islands, award cards, studio screens,
-favicon, social card) are generated from `profile.js` and the photo in `scripts/art/photo.png`:
+favicon, social card, event photos) are generated from `profile.js`, the portrait in `scripts/art/photo.png`
+and the event photos in `scripts/art/events/`:
 
 ```bash
 node scripts/art/gen-art.mjs
 ```
 
-Run a single group with e.g. `node scripts/art/gen-art.mjs balloons` (groups: `avatars`, `galleryCards`,
+Run a single group with e.g. `node scripts/art/gen-art.mjs balloons` (groups: `avatars`, `corridorPhotos`, `galleryCards`,
 `techLogos`, `balloons`, `islands`, `certificates`, `monitorBezel`, `studioScreens`, `door`, `entranceDoors`, `wallArt`, `brand`).
 
 ## Local development
