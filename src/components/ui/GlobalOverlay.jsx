@@ -68,9 +68,8 @@ const GlobalOverlay = () => {
     return <ContentCard content={content} isOpen={animateOpen} onClose={closeOverlay} isMobile={isMobile} />;
 };
 
+// `content` is always set: GlobalOverlay falls back to cached or dummy content.
 const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
-    if (!content) return null;
-
     const label = content.platformConfig?.label || 'Content';
 
     // GSAP TextPlugin typing effect for description

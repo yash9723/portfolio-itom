@@ -18,44 +18,63 @@ A light link-in-bio page lives at `/start`, and the resume is served at `/resume
 React 19, Three.js / React Three Fiber, GSAP and Vite. Based on the open-source
 [portfolio-itom](https://github.com/ITomPoland/portfolio-itom) engine by Tomasz Szmajda (see [Credits & license](#credits--license)).
 
+## Project structure
+
+```
+src/
+  data/profile.js        all personal content (single source of truth)
+  hooks/useContentData   exposes projects / studio items / awards to the rooms
+  components/
+    canvas/entrance      street, doors, cat, window
+    canvas/corridor      infinite corridor, doors, hero text, avatar, picture frames
+    canvas/rooms/        About (sky), Gallery (cards), Studio (screen tower), Contact (pier)
+    canvas/shaders       paint / reveal materials
+    dom, ui              preloader, HUD, overlay, screen-reader layer
+  config/texturePreloadList.js   every texture loaded by the preloader (derived from profile.js)
+seo-plugin.js            build-time SEO block, JSON-LD, llms.txt, robots.txt, sitemap.xml
+public/                  textures, fonts, sounds, /start page, resume.pdf, _headers (Cloudflare)
+scripts/art/             gen-art.mjs + source photo, event photos and art templates
+```
+
 ## Editing content
 
 All personal content comes from one file: [`src/data/profile.js`](src/data/profile.js)
-(name, links, experience, projects, awards, skills, studio items). The 3D rooms, the screen-reader layer,
-the SEO block, JSON-LD, `llms.txt`, `robots.txt` and `sitemap.xml` all read from it.
-
-**TODO before going live:** fill in the GitHub, LinkedIn, Trana-Trace and NAVIEL links and `SITE_URL`
-in `profile.js`, and the GitHub/LinkedIn links in `public/start/index.html`.
+(name, links, site URL, experience, projects, awards, skills, studio items, event photos). The 3D rooms,
+the screen-reader layer, the SEO block, JSON-LD, `llms.txt`, `robots.txt` and `sitemap.xml` all read from it.
+The `/start` page (`public/start/index.html`) is static HTML, so update its links by hand.
 
 ### Regenerating the artwork
 
-Textures that show personal content (photo avatar with a sticker border, project cards, balloons, islands, award cards, studio screens,
-favicon, social card, event photos) are generated from `profile.js`, the portrait in `scripts/art/photo.png`
-and the event photos in `scripts/art/events/`:
+Textures that show personal content (photo avatar, project cards, balloons, islands, award cards, studio screens,
+event photos, entrance stickers, favicon, social card) are generated from `profile.js`, the portrait in
+`scripts/art/photo.png` and the event photos in `scripts/art/events/`:
 
 ```bash
-node scripts/art/gen-art.mjs
+npm run art              # everything
+npm run art -- balloons  # one group
 ```
 
-Run a single group with e.g. `node scripts/art/gen-art.mjs balloons` (groups: `avatars`, `corridorPhotos`, `galleryCards`,
-`techLogos`, `balloons`, `islands`, `certificates`, `monitorBezel`, `studioScreens`, `door`, `entranceDoors`, `wallArt`, `brand`).
+Groups: `avatars`, `corridorPhotos`, `galleryCards`, `techLogos`, `balloons`, `islands`, `certificates`,
+`monitorBezel`, `studioScreens`, `door`, `entranceDoors`, `wallArt`, `brand`.
 
-## Local development
+## Scripts
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # production build in dist/
-node --test scripts/test-start.mjs
+npm run dev       # http://localhost:5173
+npm run build     # production build in dist/
+npm run preview   # serve dist/ locally
+npm test          # /start page tests
+npm run deploy    # build + upload to Cloudflare Pages (needs `npx wrangler login` once)
 ```
 
 Optional environment variables are listed in [`.env.example`](.env.example) (contact form and analytics).
 
-## Deploying to Vercel
+## Hosting
 
-Import the repository in Vercel. `vercel.json` already sets the Vite build, the SPA routes
-(`/about`, `/gallery`, `/studio`, `/contact`), the `/start` page and the cache headers. Add the
-variables from `.env.example` in the project settings if you use them.
+Live on **Cloudflare Pages** (project `portfolio-abhilash`, https://portfolio-abhilash.pages.dev), with the custom
+domain https://abhilashjoyeal.work.gd. `public/_headers` sets security and cache headers, and Pages serves
+`index.html` for the room URLs automatically. `vercel.json` holds the equivalent setup if you ever host on Vercel.
 
 ## Credits & license
 

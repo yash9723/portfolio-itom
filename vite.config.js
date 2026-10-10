@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import viteCompression from 'vite-plugin-compression';
 import { generateSeoHtml } from './seo-plugin.js';
 
 const START_PAGE_PATHS = new Set(['/start', '/start/']);
@@ -29,5 +28,5 @@ function serveStaticStartPage() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [serveStaticStartPage(), react(), viteCompression(), generateSeoHtml()]
+  plugins: [serveStaticStartPage(), react(), generateSeoHtml()]
 })

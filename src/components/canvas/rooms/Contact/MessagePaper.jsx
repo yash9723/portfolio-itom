@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unknown-property */
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { SITE_URL } from '../../../../data/profile';
 import { useFrame } from '@react-three/fiber';

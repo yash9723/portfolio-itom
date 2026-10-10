@@ -6,15 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "preview": "vite preview",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "test": "node --test scripts/test-start.mjs",
+    "art": "node scripts/art/gen-art.mjs",
+    "deploy": "vite build && npx --yes wrangler@4 pages deploy dist --project-name portfolio-abhilash --branch main"
   },
   "dependencies": {
-    "@gsap/react": "^2.1.2",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
-    "@react-three/postprocessing": "^3.0.4",
-    "@types/three": "^0.182.0",
     "gsap": "^3.14.2",
     "posthog-js": "^1.360.0",
     "react": "^19.2.0",
@@ -32,7 +32,6 @@
     "globals": "^16.5.0",
     "sass": "^1.97.1",
     "sharp": "^0.34.5",
-    "vite": "^7.2.4",
-    "vite-plugin-compression": "^0.5.1"
+    "vite": "^7.2.4"
   }
 }
