@@ -1,5 +1,5 @@
-/* eslint-disable react/no-unknown-property */
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { SITE_URL } from '../../../../data/profile';
 import { useFrame } from '@react-three/fiber';
 import { Text, useTexture, Html, useCursor } from '@react-three/drei';
 import * as THREE from 'three';
@@ -147,16 +147,12 @@ const SmoothButton = ({ texture, onClick, position, size, text, fontPath }) => {
 };
 
 // Web3Forms API Key — loaded from environment variable so it's not exposed in the repo.
-// Set VITE_WEB3FORMS_KEY in .env (local dev) and in Cloudflare Pages dashboard (production).
+// Set VITE_WEB3FORMS_KEY in .env (local dev) and in the Vercel project settings (production).
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || '';
 
-// Only these domains are allowed to submit the form.
+// Only the production host (from SITE_URL) may submit the form.
 // Anyone cloning the repo and running on localhost will be silently blocked.
-const ALLOWED_ORIGINS = [
-    'itomdev.com',
-    'www.itomdev.com',
-    'portfolio-itom.pages.dev',
-];
+const ALLOWED_ORIGINS = [new URL(SITE_URL).hostname];
 
 // ═══════════════════════════════════════════════════════════════════════
 // 2026 Advanced Anti-Spam System

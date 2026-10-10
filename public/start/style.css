@@ -146,25 +146,6 @@ footer { display: flex; justify-content: center; align-items: center; margin-top
 .notice { position: fixed; z-index: 5; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 40px); padding: 13px 20px; font-size: 14px; line-height: 1.5; color: var(--paper); background: var(--ink); pointer-events: none; opacity: 0; }
 .notice.is-visible { opacity: 1; }
 
-#scrub-video {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: -1;
-  pointer-events: none;
-  mix-blend-mode: darken;
-}
-
-@media (max-width: 1000px), (hover: none) {
-  #scrub-video {
-    display: none;
-  }
-}
-
 @media (hover: hover) {
   .work-link:not([data-ready]):hover .word { color: var(--blue); }
 }

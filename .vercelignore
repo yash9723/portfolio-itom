@@ -1,0 +1,5 @@
+scripts/art/templates
+scripts/art/events
+scripts/art/*.png
+dist
+.claude

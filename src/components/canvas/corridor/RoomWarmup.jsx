@@ -6,7 +6,6 @@ import GalleryRoom from '../rooms/Gallery/GalleryRoom';
 import StudioRoom from '../rooms/Studio/StudioRoom';
 import AboutRoom from '../rooms/About/AboutRoom';
 import ContactRoom from '../rooms/Contact/ContactRoom';
-import { isSanityDataLoaded } from '../../../hooks/useSanityData';
 
 /**
  * RoomWarmup Component
@@ -30,9 +29,6 @@ const RoomWarmup = ({ onWarmupComplete, isLowTier }) => {
 
     useFrame(() => {
         if (isDone || completeFired.current) return;
-
-        // Wait until Sanity data is loaded before starting warmup
-        if (!isSanityDataLoaded()) return;
 
         frameCount.current++;
 

@@ -105,9 +105,6 @@ const CorridorWalls = ({ zStart = 10, length = 80, doorPositions = [], zClip = 1
     const effectiveLength = effectiveStart - (zStart - length);
     const zCenter = effectiveStart - effectiveLength / 2;
 
-    // If fully clipped, render nothing
-    if (effectiveLength <= 0) return null;
-
     // =============================================
     // REGULACJA PRZYCIĘCIA LISTWY PRZY DRZWIACH
     // =============================================
@@ -261,6 +258,9 @@ const CorridorWalls = ({ zStart = 10, length = 80, doorPositions = [], zClip = 1
 
     const leftSegments = useMemo(() => generateWallSegments('left'), [effectiveStart, effectiveLength, doorPositions]);
     const rightSegments = useMemo(() => generateWallSegments('right'), [effectiveStart, effectiveLength, doorPositions]);
+
+    // If fully clipped, render nothing (after all hooks, so the hook order never changes)
+    if (effectiveLength <= 0) return null;
 
     return (
         <group>
